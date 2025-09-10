@@ -31,9 +31,8 @@ from roar_net_api.operations import (
 )
 
 from roar_net_api.utils.logging import (
-    get_logged_problem_solution,
-    process_run,
-    setup_logger,
+    get_logged_problem,
+    PerformanceLogger
 )
 log = getLogger(__name__)
 
@@ -323,30 +322,37 @@ if __name__ == "__main__":
     # logging.basicConfig(stream=sys.stderr, level="INFO", format="%(levelname)s;%(asctime)s;%(message)s")
     
     
-    LoggedProblem, LoggedSolution = get_logged_problem_solution(Problem, Solution)
+    LoggedProblem = get_logged_problem(Problem, Solution)
     problem = LoggedProblem.from_textio(sys.stdin)
-
-    records = {}
-    logger = None
-    for rep in range(3):
-        logger = setup_logger(logger)
-
+    perflogger = PerformanceLogger('log_test_SA.csv', 'SA')
+    for rep in range(5):
+        perflogger.reset()
         solution = alg.greedy_construction(problem)
         solution = alg.sa(problem, solution, 3.0, 30.0)
         solution.objective_value()
+    dt1 = perflogger.close()
 
-        records[rep] = process_run(logger)
+    perflogger = PerformanceLogger('log_test_RLS.csv', 'RLS')
+    for rep in range(5):
+        perflogger.reset()
+        solution = alg.greedy_construction(problem)
+        solution = alg.rls(problem, solution, 3.0)
+        solution.objective_value()
+    dt2 = perflogger.close()
+
+    import pandas as pd
+    dt_both = pd.concat([dt1, dt2], ignore_index=True)
 
     import matplotlib.pyplot as plt
 
-    plt.figure(figsize=(10, 6))
-    for rep, (times, fvals) in records.items():
-        plt.plot(times, fvals, marker='o', label=f'Run {rep}')
-    plt.xlabel('Time')
+    plt.figure(figsize=(12, 7))
+    for (idx, algname), group in dt_both.groupby(['index', 'algname']):
+        plt.plot(group['time'], group['fval'], marker='o', label=f'Run {idx} - {algname}')
+    plt.xlabel('Time (μs)')
     plt.ylabel('Objective Value')
-    plt.yscale('log')
     plt.xscale('log')
-    plt.legend()
-    plt.title('Performance over Multiple Runs')
+    plt.yscale('log')
+    plt.title('Performance over Time by Algorithm')
+    plt.legend(title='Run / Algorithm', bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
-    plt.savefig('performance_runs.png')
+    plt.savefig('performance_comparison.png')
