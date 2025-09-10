@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import logging
 import math
 import random
 import sys
@@ -317,10 +316,7 @@ class Problem(
 
 
 if __name__ == "__main__":
-    import roar_net_api.algorithms as alg
-
-    # logging.basicConfig(stream=sys.stderr, level="INFO", format="%(levelname)s;%(asctime)s;%(message)s")
-    
+    import roar_net_api.algorithms as alg    
     
     LoggedProblem = get_logged_problem(Problem, Solution)
     problem = LoggedProblem.from_textio(sys.stdin)
@@ -340,19 +336,20 @@ if __name__ == "__main__":
         solution.objective_value()
     dt2 = perflogger.close()
 
-    import pandas as pd
-    dt_both = pd.concat([dt1, dt2], ignore_index=True)
+    if False:
+        import pandas as pd
+        import matplotlib.pyplot as plt
 
-    import matplotlib.pyplot as plt
-
-    plt.figure(figsize=(12, 7))
-    for (idx, algname), group in dt_both.groupby(['index', 'algname']):
-        plt.plot(group['time'], group['fval'], marker='o', label=f'Run {idx} - {algname}')
-    plt.xlabel('Time (μs)')
-    plt.ylabel('Objective Value')
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.title('Performance over Time by Algorithm')
-    plt.legend(title='Run / Algorithm', bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.savefig('performance_comparison.png')
+        dt_both = pd.DataFrame(dt1 + dt2)
+        plt.figure(figsize=(12, 7))
+        for (idx, algname), group in dt_both.groupby(['index', 'algname']):
+            color = 'blue' if algname == 'SA' else 'orange'
+            plt.plot(group['time'], group['fval'], marker='o', label=f'Run {idx} - {algname}', color=color)
+        plt.xlabel('Time (μs)')
+        plt.ylabel('Objective Value')
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.title('Performance over Time by Algorithm')
+        plt.legend(title='Run / Algorithm', bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        plt.savefig('performance_comparison.png')
