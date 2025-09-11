@@ -12,6 +12,7 @@ import sys
 from collections.abc import Iterable, Sequence
 import logging
 from typing import Optional, Protocol, Self, TextIO, TypeVar, final
+from glob import glob
 
 from roar_net_api.operations import (
     SupportsApplyMove,
@@ -324,39 +325,26 @@ if __name__ == "__main__":
     log.addHandler(handler)
 
     LoggedProblem = get_logged_problem(Problem, Solution)
-    problem = LoggedProblem.from_textio(sys.stdin)
-    perflogger = PerformanceLogger('log_test_SA.csv', 'SA')
-    for rep in range(5):
-        perflogger.reset()
-        solution = alg.greedy_construction(problem)
-        solution = alg.sa(problem, solution, 3.0, 30.0)
-        solution.objective_value()
-        log.info(f"Objective value after local search: {solution.objective_value()}")
-    dt1 = perflogger.close()
-
-    perflogger = PerformanceLogger('log_test_RLS.csv', 'RLS')
-    for rep in range(5):
-        perflogger.reset()
-        solution = alg.greedy_construction(problem)
-        solution = alg.rls(problem, solution, 3.0)
-        solution.objective_value()
-        log.info(f"Objective value after local search: {solution.objective_value()}")
-    dt2 = perflogger.close()
-
-    if False:
-        import pandas as pd
-        import matplotlib.pyplot as plt
-
-        dt_both = pd.DataFrame(dt1 + dt2)
-        plt.figure(figsize=(12, 7))
-        for (idx, algname), group in dt_both.groupby(['index', 'algname']):
-            color = 'blue' if algname == 'SA' else 'orange'
-            plt.plot(group['time'], group['fval'], marker='o', label=f'Run {idx} - {algname}', color=color)
-        plt.xlabel('Time (μs)')
-        plt.ylabel('Objective Value')
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.title('Performance over Time by Algorithm')
-        plt.legend(title='Run / Algorithm', bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.tight_layout()
-        plt.savefig('performance_comparison.png')
+    perflogger = PerformanceLogger('log_test.csv')
+    for instance in glob('*.tsp', root_dir='instances'):
+        problem = LoggedProblem.from_textio(open(f"instances/{instance}"))
+        log.info(f"Read problem {problem.name} of size {problem.n}")
+        perflogger.add_attribute('problem', problem.name)
+        perflogger.add_attribute('n', problem.n)
+        log.info("Starting SA runs")
+        perflogger.add_attribute('algorithm', 'SA')
+        for rep in range(5):
+            perflogger.reset()
+            solution = alg.greedy_construction(problem)
+            solution = alg.sa(problem, solution, 3.0, 30.0)
+            solution.objective_value()
+            log.info(f"Objective value after local search: {solution.objective_value()}")
+        log.info("Starting RLS runs")
+        perflogger.add_attribute('algorithm', 'RLS')
+        for rep in range(5):
+            perflogger.reset()
+            solution = alg.greedy_construction(problem)
+            solution = alg.rls(problem, solution, 3.0)
+            solution.objective_value()
+            log.info(f"Objective value after local search: {solution.objective_value()}")
+    _ = perflogger.close()
