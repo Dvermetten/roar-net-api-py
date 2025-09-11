@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Optional, Union
+from typing import Any, Optional, Union, Type
 import csv
 
-from roar_net_api.operations import (
-    SupportsEmptySolution,
-    SupportsObjectiveValue,
+from roar_net_api.types import (
+    Problem,
+    Solution,
 )
 
 perflog = logging.getLogger("PerformanceLogger")
@@ -26,27 +26,41 @@ class ListLogger(logging.Handler):
 
 
 def get_logged_problem(
-    problem_cls: type[SupportsEmptySolution[SupportsObjectiveValue]], sol_cls: type[SupportsObjectiveValue]
-) -> type:
-    class LoggedSolution(sol_cls):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
+    problem_cls: Type[Problem[Any, Any, Solution]], sol_cls: Type[Solution]
+) -> Type[Problem[Any, Any, Solution]]:
+    def objective_value(self: Any) -> Optional[int]:
+        val = sol_cls.objective_value(self)
+        if val is not None:
+            global perflog
+            perflog.log(level=5, msg=f"{val}")
+            return int(val)
+        return None
 
-        def objective_value(self) -> Optional[int]:
-            val = super().objective_value()
-            if val is not None:
-                global perflog
-                perflog.log(level=5, msg=f"{val}")
-            return val
+    LoggedSolution = type(
+        "LoggedSolution",
+        (sol_cls,),
+        {
+            "objective_value": objective_value,
+        },
+    )
 
-    class LoggedProblem(problem_cls):
-        def empty_solution(self) -> LoggedSolution:
-            sol = super().empty_solution()
-            return LoggedSolution(*sol.__dict__.values())
+    # Dynamically create LoggedProblem using type()
+    def empty_solution(self: Any) -> Solution:
+        sol = problem_cls.empty_solution(self)
+        return LoggedSolution(*sol.__dict__.values())
 
-        def random_solution(self) -> LoggedSolution:
-            sol = super().random_solution()
-            return LoggedSolution(*sol.__dict__.values())
+    def random_solution(self: Any) -> Solution:
+        sol = problem_cls.random_solution(self)
+        return LoggedSolution(*sol.__dict__.values())
+
+    LoggedProblem = type(
+        "LoggedProblem",
+        (problem_cls,),
+        {
+            "empty_solution": empty_solution,
+            "random_solution": random_solution,
+        },
+    )
 
     return LoggedProblem
 
@@ -79,8 +93,8 @@ class PerformanceLogger:
         self.attributes[key] = value
 
     def process_run(self) -> list[tuple[Union[int, float, str]]]:
-        times, fvals = zip(*[entry.split(" ", 1) for entry in self.logger.records])
-        times = [float(t) - float(times[0]) for t in list(times)]
+        times_tuple, fvals = zip(*[entry.split(" ", 1) for entry in self.logger.records])
+        times = [float(t) - float(times_tuple[0]) for t in times_tuple]
         attributes = getattr(self, "attributes", {})
         records = []
         for t, f in zip(times, fvals):
