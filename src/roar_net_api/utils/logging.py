@@ -13,10 +13,11 @@ from roar_net_api.operations import (
 
 perflog = logging.getLogger("PerformanceLogger")
 
+
 class ListLogger(logging.Handler):
     def __init__(self, level: int = 5):
         super().__init__(level=level)
-        self.records : list[str] = []
+        self.records: list[str] = []
         self.level = level
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -24,7 +25,9 @@ class ListLogger(logging.Handler):
             self.records.append(self.format(record))
 
 
-def get_logged_problem(problem_cls : type[SupportsEmptySolution[SupportsObjectiveValue]], sol_cls: type[SupportsObjectiveValue]) -> type:
+def get_logged_problem(
+    problem_cls: type[SupportsEmptySolution[SupportsObjectiveValue]], sol_cls: type[SupportsObjectiveValue]
+) -> type:
     class LoggedSolution(sol_cls):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
