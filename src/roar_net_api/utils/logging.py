@@ -3,24 +3,28 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 import csv
+
+from roar_net_api.operations import (
+    SupportsEmptySolution,
+    SupportsObjectiveValue,
+)
 
 perflog = logging.getLogger("PerformanceLogger")
 
-
 class ListLogger(logging.Handler):
-    def __init__(self, level=5):
+    def __init__(self, level: int = 5):
         super().__init__(level=level)
-        self.records = []
+        self.records : list[str] = []
         self.level = level
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         if record.levelno == self.level:
             self.records.append(self.format(record))
 
 
-def get_logged_problem(problem_cls, sol_cls):
+def get_logged_problem(problem_cls : type[SupportsEmptySolution[SupportsObjectiveValue]], sol_cls: type[SupportsObjectiveValue]) -> type:
     class LoggedSolution(sol_cls):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -47,8 +51,7 @@ def get_logged_problem(problem_cls, sol_cls):
 class PerformanceLogger:
     def __init__(self, filename: Optional[str] = None, algname: Optional[str] = None):
         self.run_id: int = 0
-        self.records: dict = {}
-        self.finished_runs: list[tuple[list[float], list[float]]] = []
+        self.finished_runs: list[tuple[Union[int, float, str]]] = []
         self.filename = filename if filename is not None else "performance_log.csv"
         self.algname = algname
         self.logger = ListLogger()
@@ -57,7 +60,7 @@ class PerformanceLogger:
         perflog.addHandler(self.logger)
         perflog.setLevel(5)
 
-    def reset(self):
+    def reset(self) -> None:
         if self.logger.records is not None and len(self.logger.records) > 1:
             self.finished_runs += self.process_run()
             self.logger.records.clear()
@@ -65,24 +68,24 @@ class PerformanceLogger:
         self.run_id += 1
         return
 
-    def add_attribute(self, key: str, value):
+    def add_attribute(self, key: str, value: str) -> None:
         if self.logger.records is not None and len(self.logger.records) > 1:
             self.reset()
         if not hasattr(self, "attributes"):
             self.attributes = {}
         self.attributes[key] = value
 
-    def process_run(self):
+    def process_run(self) -> list[tuple[Union[int, float, str]]]:
         times, fvals = zip(*[entry.split(" ", 1) for entry in self.logger.records])
-        times = [float(t) - float(times[0]) for t in times]
+        times = [float(t) - float(times[0]) for t in list(times)]
         attributes = getattr(self, "attributes", {})
         records = []
         for t, f in zip(times, fvals):
-            record = [self.run_id, int(t * 1e6) + 1, float(f), *attributes.values()]
+            record = tuple([int(self.run_id), int(t * 1e6) + 1, float(f), *attributes.values()])
             records.append(record)
         return records
 
-    def save_runs(self):
+    def save_runs(self) -> list[tuple[Union[int, float, str]]]:
         fieldnames = ["index", "time", "fval", *(getattr(self, "attributes", {}).keys())]
         with open(self.filename, "w", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -93,7 +96,7 @@ class PerformanceLogger:
 
         return self.finished_runs
 
-    def close(self):
+    def close(self) -> list[tuple[Union[int, float, str]]]:
         self.reset()
         global perflog
         if self.logger:
