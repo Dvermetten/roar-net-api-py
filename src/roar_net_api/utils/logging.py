@@ -73,11 +73,7 @@ class PerformanceLogger:
         records = []
         for idx, run in enumerate(self.finished_runs):
             for t, f in zip(run[0], run[1]):
-                record = {
-                    "index": idx,
-                    "time": int(t * 1e6 + 1),
-                    "fval": f
-                }
+                record = {"index": idx, "time": int(t * 1e6 + 1), "fval": f}
                 if self.algname is not None:
                     record["algname"] = self.algname
                 records.append(record)
@@ -101,5 +97,4 @@ class PerformanceLogger:
         global perflog
         if self.logger:
             perflog.removeHandler(self.logger)
-        self.save_runs()
-        return
+        return self.save_runs()
