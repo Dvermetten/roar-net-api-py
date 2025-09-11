@@ -10,7 +10,7 @@ import math
 import random
 import sys
 from collections.abc import Iterable, Sequence
-from logging import getLogger
+import logging
 from typing import Optional, Protocol, Self, TextIO, TypeVar, final
 
 from roar_net_api.operations import (
@@ -33,7 +33,7 @@ from roar_net_api.utils.logging import (
     get_logged_problem,
     PerformanceLogger
 )
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class _SupportsLT(Protocol):
@@ -317,7 +317,12 @@ class Problem(
 
 if __name__ == "__main__":
     import roar_net_api.algorithms as alg    
-    
+
+    log.setLevel(logging.INFO)
+    handler = logging.StreamHandler(sys.stderr)  
+    handler.setFormatter(logging.Formatter("%(levelname)s;%(asctime)s;%(message)s"))
+    log.addHandler(handler)
+
     LoggedProblem = get_logged_problem(Problem, Solution)
     problem = LoggedProblem.from_textio(sys.stdin)
     perflogger = PerformanceLogger('log_test_SA.csv', 'SA')
@@ -326,6 +331,7 @@ if __name__ == "__main__":
         solution = alg.greedy_construction(problem)
         solution = alg.sa(problem, solution, 3.0, 30.0)
         solution.objective_value()
+        log.info(f"Objective value after local search: {solution.objective_value()}")
     dt1 = perflogger.close()
 
     perflogger = PerformanceLogger('log_test_RLS.csv', 'RLS')
@@ -334,6 +340,7 @@ if __name__ == "__main__":
         solution = alg.greedy_construction(problem)
         solution = alg.rls(problem, solution, 3.0)
         solution.objective_value()
+        log.info(f"Objective value after local search: {solution.objective_value()}")
     dt2 = perflogger.close()
 
     if False:
