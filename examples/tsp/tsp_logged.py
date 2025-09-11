@@ -30,10 +30,8 @@ from roar_net_api.operations import (
     SupportsRandomSolution,
 )
 
-from roar_net_api.utils.logging import (
-    get_logged_problem,
-    PerformanceLogger
-)
+from roar_net_api.utils.logging import get_logged_problem, PerformanceLogger
+
 log = logging.getLogger(__name__)
 
 
@@ -317,30 +315,32 @@ class Problem(
 
 
 if __name__ == "__main__":
-    import roar_net_api.algorithms as alg    
+    import roar_net_api.algorithms as alg
 
     log.setLevel(logging.INFO)
-    handler = logging.StreamHandler(sys.stderr)  
+    handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(logging.Formatter("%(levelname)s;%(asctime)s;%(message)s"))
     log.addHandler(handler)
 
     LoggedProblem = get_logged_problem(Problem, Solution)
-    perflogger = PerformanceLogger('log_test.csv')
-    for instance in glob('*.tsp', root_dir='instances'):
+    perflogger = PerformanceLogger("log_test.csv")
+    for instance in glob("*.tsp", root_dir="instances"):
         problem = LoggedProblem.from_textio(open(f"instances/{instance}"))
         log.info(f"Read problem {problem.name} of size {problem.n}")
-        perflogger.add_attribute('problem', problem.name)
-        perflogger.add_attribute('n', problem.n)
+        perflogger.add_attribute("problem", problem.name)
+        perflogger.add_attribute("n", problem.n)
+
         log.info("Starting SA runs")
-        perflogger.add_attribute('algorithm', 'SA')
+        perflogger.add_attribute("algorithm", "SA")
         for rep in range(5):
             perflogger.reset()
             solution = alg.greedy_construction(problem)
             solution = alg.sa(problem, solution, 3.0, 30.0)
             solution.objective_value()
             log.info(f"Objective value after local search: {solution.objective_value()}")
+
         log.info("Starting RLS runs")
-        perflogger.add_attribute('algorithm', 'RLS')
+        perflogger.add_attribute("algorithm", "RLS")
         for rep in range(5):
             perflogger.reset()
             solution = alg.greedy_construction(problem)

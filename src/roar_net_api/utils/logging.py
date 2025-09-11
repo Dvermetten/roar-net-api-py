@@ -75,17 +75,16 @@ class PerformanceLogger:
     def process_run(self):
         times, fvals = zip(*[entry.split(" ", 1) for entry in self.logger.records])
         times = [float(t) - float(times[0]) for t in times]
-        fvals = [float(f) for f in fvals]
         attributes = getattr(self, "attributes", {})
         records = []
         for t, f in zip(times, fvals):
-            record = [self.run_id, int(t * 1e6) + 1, f, *attributes.values()]
+            record = [self.run_id, int(t * 1e6) + 1, float(f), *attributes.values()]
             records.append(record)
         return records
 
     def save_runs(self):
         fieldnames = ["index", "time", "fval", *(getattr(self, "attributes", {}).keys())]
-        with open(self.filename, 'w', newline='') as csvfile:
+        with open(self.filename, "w", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             for record in self.finished_runs:
